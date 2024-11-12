@@ -62,12 +62,15 @@ def few_second_clips(td, clip = 5, overlap = 1):
 
 ####################################################
 
-# 2. Low pass filter function
+# 2. Load audio as mono file, resample and apply band pass filter function
 
-def filter_audio(td, cutoff=1500, order=5):
+def filter_audio(td, 
+                 sf = 22050,
+                 cutoff=[50,1500], order=5):
     # td: location of all audio files
-    # cutoff: low pass frequency in Hz
-    # order: order of butterworth filter
+    # sr: required sampling rate in Hz, defaults to 22.05kHz
+    # cutoff: band pass frequency in Hz, defaults to [0, 1500]
+    # order: order of butterworth filter, defaults to 5
     
     # Create folders to store clipped audio and noise
     filepath = f'{td}filtered\\'
@@ -77,14 +80,14 @@ def filter_audio(td, cutoff=1500, order=5):
     files = [f for f in os.listdir(td) if os.path.isfile(f'{td}{f}') and f.endswith(".wav")]
     
     for name in files:
-        # Load audio
-        aud, sr = librosa.load(f'{td}{name}')
+        # Load audio in mono and resample
+        aud, sr = librosa.load(f'{td}{name}', sr=sf, mono=True)
 
         # Define prefix to name output files
         filename = name[:-4] 
         
         # Generate butterworth coefficients a,b
-        a,b = butter(order, cutoff, fs=sr, btype='low', analog=False)
+        a,b = butter(N= order, Wn = cutoff, fs=sr, btype='band', analog=False)
         # Apply filter that returns filtered audio y
         y = lfilter(a,b, aud)
         # Save to wav file
@@ -92,3 +95,7 @@ def filter_audio(td, cutoff=1500, order=5):
     
     # Display success message
     print(f'Filtered audio for {td}')
+    
+    ####################################################
+
+
