@@ -1,3 +1,26 @@
+# Utility functions
+
+# 1. filename_to_csv
+## Input: folder with audio or spectrograms
+## User defined: file format and whether to record sampling rate also
+## Output: csv file with names of all files in folder
+
+# 2. move_to_folder
+## Input: folder with audio or spectrograms
+## User defined: target folder to move files to and format of the files
+## Output: files moved to target
+
+# 3. move_to_label
+## Input: folder with audio or spectrograms and a csv containing 'filename' and 'label' columns
+## User defined: target folder and format of the files
+## Output: Within target folder, files are moved to folders corresponding to labels in the csv
+
+# 4. combin
+## Input: folder with audio files
+## Output: Combined audio file in same folder
+
+####################################################
+
 import numpy as np
 import os
 import pandas as pd
@@ -9,36 +32,19 @@ from pydub import AudioSegment
 # 1. Define function to read filenames and save to a csv.
 ## For .wav files, also save sampling rates
 
-def filename_to_csv(td, format='.wav', sr=False):
+def filename_to_csv(td, format='.wav'):
     # td: location of all audio files
     # format : format of the files '.wav' or .png'
     # sr= True or False- if sampling rate value is also needed
     
     # Generate a pandas series of all filenames ending with .wav
     files = pd.Series([f for f in os.listdir(td) if os.path.isfile(f'{td}{f}') and f.endswith(format)])
-    # Intialize empty files_sr series
-    files_sr = pd.Series(dtype='float64')
-    
-    # For .wav files, also save sampling rates
-    if sr == True:
-        # for loop to read audio files and get sampling rates
-        for name in files:
-            # Load audio file
-            aud, sr = librosa.load(f'{td}{name}')
-            # Add sr to files_sr
-            files_sr = pd.concat([files_sr,pd.Series(sr)], ignore_index=True)
-        # Combine both to one dataframe
-        df = pd.concat([files, files_sr], axis = 1)
-        df.columns = ['filename' , 'sampling_rate']
-    else:
-        df = files
 
     # Export the df as csv
-    df.to_csv(f'{td}file_names.csv', index=True)
+    files.to_csv(f'{td}file_names.csv', index=True)
     
     # Display success message
     print(f'Filename csv created for {td}')
-
 
 ####################################################
 
@@ -125,5 +131,6 @@ def combin(td):
     print(f'{td} done')
     
     ####################################################
-    
-    
+
+####################################################
+

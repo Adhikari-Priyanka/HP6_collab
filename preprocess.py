@@ -1,23 +1,33 @@
 # Define functions to preprocess audio files
 
-# 1. few_second_clip .wav files
+# 1. few_second_clip
 ## Input: folder with audio files
 ## User defined: clip duration and working directory.
-## Output: new folder with clipped audio filies labelled with suffix _clip_n where n is 0,1,2...
+## Output: new folder with clipped audio filies labelled with suffix '_clip_n' where n is 0,1,2...
+
+# 2. audio_process
+## Input: folder with audio files
+## User defined: bandpass filter frequencies and sampling rate
+## Output: new folder with processed audio files labelled with suffic '_f'
+
+# 3. spec_process
+## Input: folder with audio files
+## User defined: fft_n and hop size, option to change midpoint of color map
+## Output: new folder with spectograms labelled with prefix 's_'
 
 ####################################################
 
 import pandas as pd
 import numpy as np
 import os
-from pydub import AudioSegment
 import librosa
 import soundfile as sf
 import librosa.display
-import IPython.display as ipd
 import matplotlib.pylab as plt
 from scipy.signal import butter, lfilter, freqz
 from scipy.io.wavfile import write
+import imageio.v3 as iio
+import matplotlib.colors as colors
 
 ####################################################
 
@@ -64,7 +74,7 @@ def few_second_clips(td, clip = 5, overlap = 1):
 
 # 2. Load audio as mono file, resample and apply band pass filter function
 
-def filter_audio(td, 
+def audio_process(td, 
                  sf = 22050,
                  cutoff=[50,1500], order=5):
     # td: location of all audio files
@@ -72,7 +82,7 @@ def filter_audio(td,
     # cutoff: band pass frequency in Hz, defaults to [0, 1500]
     # order: order of butterworth filter, defaults to 5
     
-    # Create folders to store clipped audio and noise
+    # Create folders to store processed audio
     filepath = f'{td}filtered\\'
     if not os.path.exists(filepath): os.makedirs(filepath)
     
@@ -96,6 +106,68 @@ def filter_audio(td,
     # Display success message
     print(f'Filtered audio for {td}')
     
-    ####################################################
+####################################################
+
+# Create spectrogram with given fft_n and hop_size
+# # Optional- change midpoint of colormap
+
+def spec_process(td,
+                 fft_n = 256, hop_size = 128, mid=50):
+    # td: location of all audio files
+    # fft_n: fast fourier transform window length
+    # hop_size: hop length
+    
+    min_dB = 0
+    max_dB = 100
+    
+    # Create folders to store spectrograms
+    filepath = f'{td}specs\\'
+    if not os.path.exists(filepath): os.makedirs(filepath)
+    
+    # For all .wav files in the defined working directory
+    files = [f for f in os.listdir(td) if os.path.isfile(f'{td}{f}') and f.endswith(".wav")]
+    
+    for name in files:
+        # Load audio
+        aud, sr = librosa.load(f'{td}{name}', sr=None)
+
+        # calculate short time FT
+        aud_sfft = librosa.stft(aud, n_fft=fft_n, hop_length=hop_size)
+
+        # Converts stft output of complex numbers into abs no for better visualization
+        aud_y = np.abs(aud_sfft)**2 
+
+        # convert from power to dB 
+        aud_y_log = librosa.power_to_db(aud_y)
+
+        # Normalize the spectrogram to the range min and max dB
+        # Get the min and max of the original dB spectrogram
+        aud_y_log_min = np.min(aud_y_log)
+        aud_y_log_max = np.max(aud_y_log)
+
+        # Rescale the dB spectrogram to the desired range
+        aud_y_log_norm = min_dB + ((aud_y_log - aud_y_log_min) / (aud_y_log_max - aud_y_log_min)) * (max_dB - min_dB)
+        
+        plt.figure(figsize=(15.55,3.11))  # 3.11, 3.11 creates a plot that will result in a 224x224 resolution (224 px / 72 DPI = ~3.11 inches)
+        
+        if (mid==50): # if no value specified, make default spectrogram
+            librosa.display.specshow(aud_y_log_norm, sr=sr,hop_length=hop_size, y_axis='log', cmap='viridis')
+        else: # if value specified, then use
+            ## Define the normalization mid point for cmap
+            diversity_norm = colors.TwoSlopeNorm(vcenter=mid)
+            librosa.display.specshow(aud_y_log_norm, sr=sr,hop_length=hop_size, y_axis='log', cmap='viridis',norm = diversity_norm)
+        
+        plt.rcParams.update({'font.size': 0})
+        plt.yticks([]) # Remove y ticks
+        plt.xticks([]) # Remove x ticks  
+        plt.savefig(f'{filepath}s_{name[:-4]}.png')
+        plt.clf()
+        plt.close()
+    
+    # Display success message
+    print(f'Created specs for audio in {td}')
+
+####################################################
+
 
 
