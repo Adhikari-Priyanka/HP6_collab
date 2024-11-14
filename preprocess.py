@@ -1,16 +1,25 @@
 # Define functions to preprocess audio files
 
 # 1. few_second_clip
+# Clip audio into smaller clips
 ## Input: folder with audio files
 ## User defined: clip duration and working directory.
 ## Output: new folder with clipped audio filies labelled with suffix '_clip_n' where n is 0,1,2...
 
-# 2. audio_process
+# 2. clip_signal_and_noise
+# Clip raw audio from Hydrophone using csv of start and end times
+## Input: foldr with audio files, 
+##        csv file with start and end time for clip, prefix and suffix noise + clip name
+## Output: new folder with clipped audio files + folder containing noise
+
+# 3. audio_process
+# Resample mono audio and apply bandpass filter
 ## Input: folder with audio files
 ## User defined: bandpass filter frequencies and sampling rate
 ## Output: new folder with processed audio files labelled with suffic '_f'
 
-# 3. spec_process
+# 4. spec_process
+# Make spectrograms
 ## Input: folder with audio files
 ## User defined: fft_n and hop size, option to change midpoint of color map
 ## Output: new folder with spectograms labelled with prefix 's_'
@@ -28,6 +37,7 @@ from scipy.signal import butter, lfilter, freqz
 from scipy.io.wavfile import write
 import imageio.v3 as iio
 import matplotlib.colors as colors
+from pydub import AudioSegment
 
 ####################################################
 
@@ -67,16 +77,74 @@ def few_second_clips(td, clip = 5, overlap = 1):
             # Export clipped audio
             sf.write(f'{filepath}{name}_{start_time}.wav', clip_audio, sr)
 
-        # Display success message
-        print(f'Audio: {name} clipped')
+    # Display success message
+    print(f'Audio clipped in {td}')
 
 ####################################################
 
-# 2. Load audio as mono file, resample and apply band pass filter function
+# 2. for loop to clip from raw audio from Hydrophone using csv of start and end times
+
+def clip_signal_and_noise(td, csv_filename):
+    # td:  location of all audio files
+
+    # Create folders to store clipped audio and noise
+    filepath = f'{td}clipped\\'
+    if not os.path.exists(filepath): os.makedirs(filepath)
+    if not os.path.exists(f'{filepath}pre_noise'): os.makedirs(f'{filepath}pre_noise')
+    if not os.path.exists(f'{filepath}suf_noise'): os.makedirs(f'{filepath}suf_noise')
+
+    # For all .wav files in the defined working directory, clip as per csv file and export clipped file
+    files = [f for f in os.listdir(td) if os.path.isfile(f'{td}{f}') and f.endswith(".wav")]
+
+    # for loop to clip all the audio files
+    for n in files:
+        name = n[:-4] # EXtract just name of the file not '.wav'
+        
+        # Read file
+        audio = AudioSegment.from_wav(f'{td}{n}')
+        
+        # Read csv file
+        calls = pd.read_csv(f'{td}{csv_filename}')
+
+        # Filter calls.csv by file name
+        calls_filter = calls[calls['file_name'] == name]
+
+        # For each row, read start and end time
+        for row in calls_filter.iterrows():
+            # Clip signal
+            clip_name = row[1]['clip_name']
+            st = row[1]['start_time_ms']
+            end = row[1]['end_time_ms']
+            clip_audio = audio[st:end]
+            clip_audio.export(f'{filepath}{name}_{clip_name}.wav', 
+                            format= 'wav')
+            
+            # Clip prefix noise
+            # For each row, read prefix noise start and end time
+            st = row[1]['prefix_start_time']
+            end = row[1]['prefix_end_time']
+            clip_audio = audio[st:end]
+            clip_audio.export(f'{filepath}pre_noise\\pn_{name}_{clip_name}.wav', 
+                            format= 'wav')
+            
+            # Clip suffix noise
+            # For each row, read suffix noise start and end time
+            st = row[1]['suffix_start_time']
+            end = row[1]['suffix_end_time']
+            clip_audio = audio[st:end]
+            clip_audio.export(f'{filepath}suf_noise\\sn_{name}_{clip_name}.wav', 
+                            format= 'wav')
+            
+    # Success message
+    print(f'Signal and noise clipped in {td}')
+
+####################################################
+
+# 3. Load audio as mono file, resample and apply band pass filter function
 
 def audio_process(td, 
                  sf = 22050,
-                 cutoff=[50,1500], order=5):
+                 cutoff=[50,2000], order=5):
     # td: location of all audio files
     # sr: required sampling rate in Hz, defaults to 22.05kHz
     # cutoff: band pass frequency in Hz, defaults to [0, 1500]
@@ -108,11 +176,11 @@ def audio_process(td,
     
 ####################################################
 
-# Create spectrogram with given fft_n and hop_size
+# 4. Create spectrogram with given fft_n and hop_size
 # # Optional- change midpoint of colormap
 
 def spec_process(td,
-                 fft_n = 256, hop_size = 128, mid=50):
+                 fft_n = 512, hop_size = 256, mid=50):
     # td: location of all audio files
     # fft_n: fast fourier transform window length
     # hop_size: hop length
@@ -148,7 +216,7 @@ def spec_process(td,
         # Rescale the dB spectrogram to the desired range
         aud_y_log_norm = min_dB + ((aud_y_log - aud_y_log_min) / (aud_y_log_max - aud_y_log_min)) * (max_dB - min_dB)
         
-        plt.figure(figsize=(15.55,3.11))  # 3.11, 3.11 creates a plot that will result in a 224x224 resolution (224 px / 72 DPI = ~3.11 inches)
+        plt.figure(figsize=(3.11,3.11))  # 3.11, 3.11 creates a plot that will result in a 224x224 resolution (224 px / 72 DPI = ~3.11 inches)
         
         if (mid==50): # if no value specified, make default spectrogram
             librosa.display.specshow(aud_y_log_norm, sr=sr,hop_length=hop_size, y_axis='log', cmap='viridis')

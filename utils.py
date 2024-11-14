@@ -64,6 +64,9 @@ def move_to_folder(source, target, format = '.wav'):
         # move to new location
         os.replace(f'{source}{n}' ,f'{target}{n}') 
     
+    # remove old folder
+    #os.remove(source)
+    
     # Display success message
     print(f'{format} files moved from {source} to {target}')
 
@@ -101,8 +104,8 @@ def move_to_label(source, target, df, format='.wav'):
         # Move to new
         os.replace(f'{source}{n}', f'{dest}{n}')
         
-        # Display success message
-        print(f'{format} files moved from {source} to {target}')
+    # Display success message
+    print(f'{format} files moved from {source} to {target}')
 
 ####################################################
 
