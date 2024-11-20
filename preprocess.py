@@ -227,8 +227,9 @@ def spec_process(td,
         
         plt.rcParams.update({'font.size': 0})
         plt.yticks([]) # Remove y ticks
-        plt.xticks([]) # Remove x ticks  
-        plt.savefig(f'{filepath}s_{name[:-4]}.png')
+        plt.xticks([]) # Remove x ticks
+        plt.ylabel('')
+        plt.savefig(f'{filepath}s_{name[:-4]}.png', dpi=72, bbox_inches='tight', pad_inches=0)
         plt.clf()
         plt.close()
     
