@@ -11,6 +11,30 @@ from tensorflow.keras.preprocessing import image
 import pandas as pd
 import matplotlib.pyplot as plt
 
+####################################################
+
+# Define image size appropriate for EfficientNetB0
+IMG_SIZE = 224
+BATCH_SIZE=64
+# Define variables for model 1 (frozen layers)
+## Number of epochs
+MODEL1_EPOCHS = 40
+## Learning rate
+MODEL1_LR = 1e-2
+
+# Define variables for model 2 (unfrozen layers)
+## Number of epochs
+MODEL2_EPOCHS = 5
+## Number of layers to unfreeze
+UNFREEZE_LAYERS = -20
+## Learning rate
+MODEL2_LR = 1e-6
+
+# Define score threshold to assign labels to predictions
+SCORE_THRESHOLD = 0.5
+
+####################################################
+
 #Define function to make a model
 
 from tensorflow.keras.applications import EfficientNetB0
@@ -42,6 +66,8 @@ def build_model(num_classes):
 
     return model
 
+####################################################
+
 # Define fucntion to plot accuracy of train and validation dataset from the model
 
 def plot_hist(hist):
@@ -53,7 +79,7 @@ def plot_hist(hist):
     plt.legend(["train", "validation"], loc="upper left")
     plt.show()
 
-
+####################################################
 
 # Define function to unfreeze n layers
 
@@ -67,6 +93,7 @@ def unfreeze_model(model, n=UNFREEZE_LAYERS):
 
     return model
 
+####################################################
 
 # Define function to generate a report of prediction and probabilities
 def predict_unseen(model, td, score_threshold, tag='_'):
@@ -103,5 +130,4 @@ def predict_unseen(model, td, score_threshold, tag='_'):
   results_df = pd.DataFrame(results)
   results_df.to_csv(f'{td}Result_report_{tag}.csv', index=False)
 
-
-
+####################################################
